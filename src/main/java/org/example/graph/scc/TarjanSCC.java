@@ -2,6 +2,8 @@ package org.example.graph.scc;
 
 import org.example.graph.models.Graph;
 import org.example.graph.models.Edge;
+import org.example.graph.metrics.Metrics;
+
 import java.util.*;
 
 public class TarjanSCC {
@@ -12,12 +14,18 @@ public class TarjanSCC {
     private Stack<Integer> stack;
     private List<List<Integer>> components;
     private Graph graph;
+    private Metrics metrics;
 
-    public TarjanSCC() {}
+    public TarjanSCC() {
+        this.metrics = new Metrics("TarjanSCC");
+    }
 
     //Finds all strongly connected components in the graph
 
     public SCCResult findSCCs(Graph graph) {
+        metrics.startTimer();
+        metrics.reset();
+
         this.graph = graph;
         int n = graph.getN();
 
@@ -46,11 +54,15 @@ public class TarjanSCC {
         // Build condensation graph
         Graph condensationGraph = buildCondensationGraph(graph, components, componentId);
 
+        metrics.stopTimer();
         return new SCCResult(components, condensationGraph, componentId);
     }
 
     // DFS method for Tarjan's algorithm
     private void strongConnect(int vertex) {
+        metrics.incrementVerticesVisited();
+        metrics.incrementStackOperations(); // for push
+
         indices[vertex] = index;
         lowlinks[vertex] = index;
         index++;
@@ -131,5 +143,9 @@ public class TarjanSCC {
                 componentId[originalGraph.getSource()], // map source to its component
                 originalGraph.getWeightModel()
         );
+    }
+
+    public Metrics getMetrics() {
+        return metrics;
     }
 }

@@ -1,16 +1,26 @@
 package org.example.graph.topo;
 
 
+import org.example.graph.metrics.Metrics;
 import org.example.graph.models.Graph;
 import org.example.graph.models.Edge;
 import org.example.graph.scc.SCCResult;
 
+
 import java.util.*;
 
 public class KahnTopologicalSort {
+    private Metrics metrics;
+
+    public KahnTopologicalSort() {
+        this.metrics = new Metrics("KahnTopologicalSort"); // ИНИЦИАЛИЗИРУЙ ЗДЕСЬ!
+    }
 
     // Performs topological sort on the condensation graph
     public TopologicalSortResult sort(Graph condensationGraph, SCCResult sccResult) {
+        metrics.startTimer();
+        metrics.reset();
+
         int n = condensationGraph.getN();
 
         // Calculate in-degrees for each component
@@ -37,6 +47,7 @@ public class KahnTopologicalSort {
 
         // Process nodes
         while (!queue.isEmpty()) {
+            metrics.incrementQueueOperations();
             int u = queue.poll();
             componentOrder.add(u);
             visitedCount++;
@@ -56,6 +67,7 @@ public class KahnTopologicalSort {
         // Build vertex order from component order
         List<Integer> vertexOrder = buildVertexOrder(componentOrder, sccResult);
 
+        metrics.stopTimer();
         return new TopologicalSortResult(componentOrder, vertexOrder, hasCycle);
     }
 
@@ -92,5 +104,9 @@ public class KahnTopologicalSort {
     // Alternative method: topological sort using original graph and SCC result
     public TopologicalSortResult sortFromSCC(Graph originalGraph, SCCResult sccResult) {
         return sort(sccResult.getCondensationGraph(), sccResult);
+    }
+
+    public Metrics getMetrics() {
+        return metrics;
     }
 }
