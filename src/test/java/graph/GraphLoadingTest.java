@@ -1,8 +1,7 @@
 package graph;
 
-import org.example.graph.model.Graph;
-import org.example.graph.model.Edge;
-import org.example.graph.util.GraphLoader;
+import org.example.graph.models.Graph;
+import org.example.graph.models.Edge;
 import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.*;
 
