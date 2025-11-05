@@ -1,6 +1,6 @@
 package org.example.graph.util;
 
-import org.example.graph.model.Graph;
+import org.example.graph.models.Graph;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.io.File;
 import java.io.IOException;

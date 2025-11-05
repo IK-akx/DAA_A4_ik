@@ -1,4 +1,4 @@
-package org.example.graph.model;
+package org.example.graph.models;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import java.util.ArrayList;
