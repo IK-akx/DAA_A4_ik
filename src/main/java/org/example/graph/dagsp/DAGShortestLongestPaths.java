@@ -1,5 +1,6 @@
 package org.example.graph.dagsp;
 
+import org.example.graph.metrics.Metrics;
 import org.example.graph.models.Graph;
 import org.example.graph.models.Edge;
 import org.example.graph.topo.TopologicalSortResult;
@@ -7,11 +8,26 @@ import org.example.graph.topo.TopologicalSortResult;
 import java.util.*;
 
 public class DAGShortestLongestPaths {
-    private static final int INFINITY = Integer.MAX_VALUE;
-    private static final int NEG_INFINITY = Integer.MIN_VALUE;
+    private static final int INFINITY = Integer.MAX_VALUE / 2; // Avoid overflow
+    private static final int NEG_INFINITY = Integer.MIN_VALUE / 2;
+    private Metrics metrics;
 
-    // Computes shortest paths from source in a DAG using topological order
+
+    public DAGShortestLongestPaths() {
+        this.metrics = new Metrics("DAGShortestLongestPaths");
+    }
+
+    public Metrics getMetrics() {
+        return metrics;
+    }
+
+    /**
+     * Computes shortest paths from source in a DAG using topological order
+     */
     public PathResult shortestPathsFromSource(Graph dag, TopologicalSortResult topoResult, int source) {
+        metrics.startTimer();
+        metrics.reset();
+
         if (dag == null || topoResult == null || !topoResult.isValid()) {
             throw new IllegalArgumentException("Invalid input: DAG must be valid and topologically sorted");
         }
@@ -23,6 +39,7 @@ public class DAGShortestLongestPaths {
         // Initialize distances
         for (int i = 0; i < n; i++) {
             distances.put(i, INFINITY);
+            metrics.incrementVerticesVisited(); // Count initialization
         }
         distances.put(source, 0);
 
@@ -30,15 +47,19 @@ public class DAGShortestLongestPaths {
 
         // Process vertices in topological order
         for (int u : topologicalOrder) {
+            metrics.incrementVerticesVisited(); // Count vertex processing
+
             if (distances.get(u) != INFINITY) {
                 // Relax all outgoing edges from u
                 for (Edge edge : dag.getOutgoingEdges(u)) {
+                    metrics.incrementEdgesRelaxed(); // COUNT THIS METRIC!
+
                     int v = edge.getV();
                     int weight = edge.getW();
 
-                    // Skip if weight would cause integer overflow
+                    // Check for integer overflow
                     if (distances.get(u) > 0 && weight > INFINITY - distances.get(u)) {
-                        continue;
+                        continue; // Skip to avoid overflow
                     }
 
                     int newDistance = distances.get(u) + weight;
@@ -51,23 +72,50 @@ public class DAGShortestLongestPaths {
             }
         }
 
-        // Find critical path (longest path from source)
-        List<Integer> criticalPath = findCriticalPath(distances, predecessors, source);
-        int criticalPathLength = 0;
+        // Find the reachable vertex with maximum distance (critical path for shortest paths context)
+        int maxDistance = 0;
+        int criticalVertex = source;
+        List<Integer> criticalPath = new ArrayList<>();
 
-        if (!criticalPath.isEmpty()) {
-            int lastVertex = criticalPath.get(criticalPath.size() - 1);
-            criticalPathLength = distances.get(lastVertex);
-            // If last vertex is unreachable, set length to 0
-            if (criticalPathLength == INFINITY) {
-                criticalPathLength = 0;
+        for (Map.Entry<Integer, Integer> entry : distances.entrySet()) {
+            if (entry.getValue() != INFINITY && entry.getValue() > maxDistance) {
+                maxDistance = entry.getValue();
+                criticalVertex = entry.getKey();
             }
         }
 
-        return new PathResult(distances, predecessors, criticalPath, criticalPathLength, source, true);
+        // Simple path reconstruction - just from source to critical vertex
+        if (criticalVertex != source) {
+            Integer current = criticalVertex;
+            while (current != null && current != source) {
+                criticalPath.add(0, current);
+                current = predecessors.get(current);
+                if (current == null) {
+                    // If we lose the path, start over with just source
+                    criticalPath.clear();
+                    criticalPath.add(source);
+                    break;
+                }
+            }
+            if (!criticalPath.isEmpty() && criticalPath.get(0) != source) {
+                criticalPath.add(0, source);
+            }
+        } else {
+            criticalPath.add(source);
+        }
+
+        // Ensure critical path length is correct
+        if (criticalPath.size() == 1 && criticalPath.get(0) == source) {
+            maxDistance = 0;
+        }
+
+        metrics.stopTimer();
+        return new PathResult(distances, predecessors, criticalPath, maxDistance, source, true);
     }
 
-    // Computes longest paths from source in a DAG using topological order
+    /**
+     * Computes longest paths from source in a DAG using topological order
+     */
     public PathResult longestPathsFromSource(Graph dag, TopologicalSortResult topoResult, int source) {
         if (dag == null || topoResult == null || !topoResult.isValid()) {
             throw new IllegalArgumentException("Invalid input: DAG must be valid and topologically sorted");
@@ -102,85 +150,41 @@ public class DAGShortestLongestPaths {
             }
         }
 
-        // Find critical path (longest path from source)
-        List<Integer> criticalPath = findCriticalPath(distances, predecessors, source);
-        int criticalPathLength = criticalPath.isEmpty() ? 0 :
-                distances.get(criticalPath.get(criticalPath.size() - 1));
-
-        return new PathResult(distances, predecessors, criticalPath, criticalPathLength, source, false);
-    }
-
-    // Finds the critical path (longest path from source)
-    private List<Integer> findCriticalPath(Map<Integer, Integer> distances,
-                                           Map<Integer, Integer> predecessors, int source) {
-        if (distances.isEmpty()) return List.of();
-
-        // Find vertex with maximum distance (excluding unreachable vertices)
+        // Find the vertex with maximum distance (critical path)
         int maxDistance = NEG_INFINITY;
-        int target = -1;
+        int criticalVertex = source;
+        List<Integer> criticalPath = new ArrayList<>();
 
         for (Map.Entry<Integer, Integer> entry : distances.entrySet()) {
-            int vertex = entry.getKey();
-            int distance = entry.getValue();
-
-            // Skip unreachable vertices and the source itself
-            if (distance != INFINITY && distance != NEG_INFINITY && vertex != source) {
-                if (distance > maxDistance) {
-                    maxDistance = distance;
-                    target = vertex;
-                }
+            if (entry.getValue() != NEG_INFINITY && entry.getValue() > maxDistance) {
+                maxDistance = entry.getValue();
+                criticalVertex = entry.getKey();
             }
         }
 
-        // If no reachable vertex found (only source), return source only
-        if (target == -1) {
-            return List.of(source);
-        }
-
-        // Reconstruct path from source to target
-        List<Integer> path = reconstructPath(predecessors, source, target);
-
-        // If path reconstruction failed, return at least the source
-        return path.isEmpty() ? List.of(source) : path;
-    }
-
-    // Reconstructs path from source to target using predecessors
-    private List<Integer> reconstructPath(Map<Integer, Integer> predecessors, int source, int target) {
-        List<Integer> path = new ArrayList<>();
-
-        // If target is the source, return just the source
-        if (target == source) {
-            path.add(source);
-            return path;
-        }
-
-        // If target has no predecessor, no path exists
-        if (!predecessors.containsKey(target)) {
-            return path;
-        }
-
-        // Reconstruct path backwards from target to source
-        Integer current = target;
-        while (current != null) {
-            path.add(0, current);
-            current = predecessors.get(current);
-            // Stop when we reach source or null
-            if (current != null && current == source) {
-                path.add(0, source);
-                break;
+        // Simple path reconstruction
+        if (criticalVertex != source) {
+            Integer current = criticalVertex;
+            while (current != null && current != source) {
+                criticalPath.add(0, current);
+                current = predecessors.get(current);
             }
+            criticalPath.add(0, source);
+        } else {
+            criticalPath.add(source);
         }
 
-        // Ensure the path starts from source
-        if (!path.isEmpty() && path.get(0) != source) {
-            // If we didn't reach source, the path is incomplete
-            return new ArrayList<>();
+        // If no path found other than source, set distance to 0
+        if (maxDistance == NEG_INFINITY) {
+            maxDistance = 0;
         }
 
-        return path;
+        return new PathResult(distances, predecessors, criticalPath, maxDistance, source, false);
     }
 
-    //  Computes both shortest and longest paths in one pass
+    /**
+     * Computes both shortest and longest paths in one pass
+     */
     public Map<String, PathResult> computeAllPaths(Graph dag, TopologicalSortResult topoResult, int source) {
         Map<String, PathResult> results = new HashMap<>();
         results.put("shortest", shortestPathsFromSource(dag, topoResult, source));

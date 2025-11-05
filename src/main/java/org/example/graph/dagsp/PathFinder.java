@@ -1,5 +1,6 @@
 package org.example.graph.dagsp;
 
+import org.example.graph.metrics.Metrics;
 import org.example.graph.models.Graph;
 import org.example.graph.topo.TopologicalSortResult;
 
@@ -102,6 +103,16 @@ public class PathFinder {
             }
 
             System.out.println();
+        }
+    }
+
+    /**
+     * Prints path results with metrics
+     */
+    public static void printPathResultsWithMetrics(PathResult result, Metrics metrics) {
+        printPathResults(result);
+        if (metrics != null) {
+            System.out.println(metrics.toReport());
         }
     }
 }
