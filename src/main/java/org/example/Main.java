@@ -3,6 +3,8 @@ package org.example;
 import org.example.graph.models.Graph;
 import org.example.graph.scc.SCCFinder;
 import org.example.graph.scc.SCCResult;
+import org.example.graph.topo.TopologicalSort;
+import org.example.graph.topo.TopologicalSortResult;
 import org.example.graph.util.GraphLoader;
 
 public class Main {
@@ -22,13 +24,17 @@ public class Main {
             System.out.println();
 
             // Perform SCC analysis
-            performSCCAnalysis(graph);
+            SCCResult sccResult = performSCCAnalysis(graph);
+
+            // Perform topological sort
+            performTopologicalSort(graph, sccResult);
+
         } else {
             System.out.println("Failed to load graph from: " + args[0]);
         }
     }
 
-    private static void performSCCAnalysis(Graph graph) {
+    private static SCCResult performSCCAnalysis(Graph graph) {
         System.out.println("=== Performing SCC Analysis ===");
         long startTime = System.nanoTime();
 
@@ -39,5 +45,32 @@ public class Main {
 
         SCCFinder.printSCCResults(sccResult);
         System.out.printf("\nSCC analysis completed in: %.3f ms\n", durationMs);
+        System.out.println();
+
+        return sccResult;
+    }
+
+    private static void performTopologicalSort(Graph graph, SCCResult sccResult) {
+        System.out.println("=== Performing Topological Sort ===");
+        long startTime = System.nanoTime();
+
+        TopologicalSortResult topoResult = TopologicalSort.sortFromOriginal(graph, sccResult);
+
+        long endTime = System.nanoTime();
+        double durationMs = (endTime - startTime) / 1_000_000.0;
+
+        TopologicalSort.printTopologicalResults(topoResult, sccResult);
+
+        // Validate the topological order
+        if (topoResult.isValid()) {
+            boolean isValid = TopologicalSort.validateTopologicalOrder(graph, topoResult.getVertexOrder(), sccResult);
+            System.out.println("Topological order validation: " + (isValid ? "PASSED" : "FAILED"));
+
+            // Also validate component order
+            boolean compValid = TopologicalSort.validateComponentOrder(sccResult.getCondensationGraph(), topoResult.getComponentOrder());
+            System.out.println("Component order validation: " + (compValid ? "PASSED" : "FAILED"));
+        }
+
+        System.out.printf("\nTopological sort completed in: %.3f ms\n", durationMs);
     }
 }
