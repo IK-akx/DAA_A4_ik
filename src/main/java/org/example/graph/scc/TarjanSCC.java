@@ -115,6 +115,11 @@ public class TarjanSCC {
     // Builds the condensation graph (DAG of components)
     private Graph buildCondensationGraph(Graph originalGraph, List<List<Integer>> components, int[] componentId) {
         int numComponents = components.size();
+
+        if (numComponents == 0) {
+            return new Graph(true, 0, new ArrayList<>(), -1, originalGraph.getWeightModel());
+        }
+
         List<Edge> condensationEdges = new ArrayList<>();
         Set<String> edgeSet = new HashSet<>(); // To avoid duplicate edges
 
@@ -122,6 +127,11 @@ public class TarjanSCC {
         for (Edge originalEdge : originalGraph.getEdges()) {
             int u = originalEdge.getU();
             int v = originalEdge.getV();
+
+            if (u >= componentId.length || v >= componentId.length) {
+                continue;
+            }
+
             int compU = componentId[u];
             int compV = componentId[v];
 
@@ -133,6 +143,11 @@ public class TarjanSCC {
                     edgeSet.add(edgeKey);
                 }
             }
+        }
+
+        int sourceComponent = -1;
+        if (originalGraph.getSource() < componentId.length) {
+            sourceComponent = componentId[originalGraph.getSource()];
         }
 
         // Create new graph for condensation

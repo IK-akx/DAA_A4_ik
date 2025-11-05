@@ -8,8 +8,8 @@ import org.example.graph.topo.TopologicalSortResult;
 import java.util.*;
 
 public class DAGShortestLongestPaths {
-    private static final int INFINITY = Integer.MAX_VALUE / 2; // Avoid overflow
-    private static final int NEG_INFINITY = Integer.MIN_VALUE / 2;
+    private static final int INFINITY = Integer.MAX_VALUE; // Avoid overflow
+    private static final int NEG_INFINITY = Integer.MIN_VALUE;
     private Metrics metrics;
 
 

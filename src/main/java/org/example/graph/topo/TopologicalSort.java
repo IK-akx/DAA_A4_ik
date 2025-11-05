@@ -1,5 +1,6 @@
 package org.example.graph.topo;
 
+import org.example.graph.metrics.Metrics;
 import org.example.graph.models.Graph;
 import org.example.graph.models.Edge;
 import org.example.graph.scc.SCCResult;
@@ -22,6 +23,20 @@ public class TopologicalSort {
     public static TopologicalSortResult sortFromOriginal(Graph originalGraph, SCCResult sccResult) {
         KahnTopologicalSort kahn = new KahnTopologicalSort();
         return kahn.sortFromSCC(originalGraph, sccResult);
+    }
+
+    /**
+     * Performs topological sort with metrics
+     */
+    public static TopologicalSortResult sortWithMetrics(Graph condensationGraph, SCCResult sccResult, Metrics metrics) {
+        KahnTopologicalSort kahn = new KahnTopologicalSort();
+        TopologicalSortResult result = kahn.sort(condensationGraph, sccResult);
+        if (metrics != null) {
+            // Можно обновить переданные метрики или использовать возвращаемые
+            Metrics kahnMetrics = kahn.getMetrics();
+            System.out.println(kahnMetrics.toReport());
+        }
+        return result;
     }
 
     /**

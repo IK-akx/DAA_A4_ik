@@ -76,8 +76,10 @@ class DAGPathsTest {
 
         assertEquals(0, result.getDistances().get(0));
         assertEquals(1, result.getDistances().get(1));
-        assertEquals(Integer.MAX_VALUE, result.getDistances().get(2));
-        assertEquals(Integer.MAX_VALUE, result.getDistances().get(3));
+
+        int INFINITY = Integer.MAX_VALUE;
+        assertEquals(INFINITY, result.getDistances().get(2));
+        assertEquals(INFINITY, result.getDistances().get(3));
     }
 
     @Test
